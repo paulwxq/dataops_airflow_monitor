@@ -1,4 +1,3 @@
-# utils.py
 import datetime
 import pytz
 from config import TIMEZONE, UTC_OFFSET, TASK_STATES
@@ -109,3 +108,46 @@ def format_dag_run_result(dag_run_data, task_data):
     }
     
     return result
+
+# utils.py 添加的函数
+def parse_state_parameter(state_param):
+    """
+    解析状态参数，返回状态列表
+    
+    Args:
+        state_param: 状态参数字符串，如 'success,failed' 或 'all'
+        
+    Returns:
+        state_list: 包含状态的列表
+    """
+    if not state_param:
+        return []
+    
+    if state_param.lower() == 'all':
+        return ['success', 'failed', 'running', 'stopped']
+    
+    return [s.strip().lower() for s in state_param.split(',')]
+
+def get_actual_states_by_category(state_categories):
+    """
+    根据状态类别返回实际的 Airflow 状态列表
+    
+    Args:
+        state_categories: 状态类别列表，如 ['success', 'failed']
+        
+    Returns:
+        actual_states: 实际 Airflow 状态列表
+    """
+    actual_states = []
+    
+    for category in state_categories:
+        if category == 'success':
+            actual_states.extend(TASK_STATES['success_states'])
+        elif category == 'failed':
+            actual_states.extend(TASK_STATES['failed_states'])
+        elif category == 'running':
+            actual_states.extend(TASK_STATES['running_states'])
+        elif category == 'stopped':
+            actual_states.extend(TASK_STATES['stopped_states'])
+    
+    return actual_states

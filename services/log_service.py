@@ -1,4 +1,3 @@
-# services/log_service.py
 import os
 from config import LOG_DIRECTORY
 
