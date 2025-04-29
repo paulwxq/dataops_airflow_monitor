@@ -2,35 +2,34 @@ from flask import Blueprint, request, jsonify
 from api.controllers.dag_controller import DAGController
 from api.controllers.task_controller import TaskController
 from api.controllers.log_controller import LogController
-from config import DEFAULT_DAG_ID
+from config import MONITOR_DAG_ID
 
 # 创建Blueprint
-api_bp = Blueprint('api', __name__, url_prefix='/api/v1')
+api_bp = Blueprint('api', __name__, url_prefix='/api')
 
 # 控制器实例
 dag_controller = DAGController()
 task_controller = TaskController()
 log_controller = LogController()
 
-@api_bp.route('/dags/<dag_id>/execution-results', methods=['GET'])
-def get_dag_execution_results(dag_id):
+@api_bp.route('/dags/exec-results', methods=['GET'])
+def get_dag_execution_results():
     """
-    获取指定DAG在指定执行日期的执行结果
+    获取配置的DAG在指定执行日期的执行结果
     
     URL参数:
-        dag_id: DAG ID
-        execution_date: 执行日期（中国时区，格式YYYY-MM-DD）
+        exec_date: 执行日期（中国时区，格式YYYY-MM-DD）
     """
     # 获取查询参数
-    execution_date = request.args.get('execution_date')
+    exec_date = request.args.get('exec_date')
     
     # 参数验证
-    if not execution_date:
-        return jsonify({'error': '缺少必需的参数execution_date'}), 400
+    if not exec_date:
+        return jsonify({'error': '缺少必需的参数exec_date'}), 400
     
     try:
         # 调用控制器方法
-        results = dag_controller.get_execution_results(dag_id, execution_date)
+        results = dag_controller.get_execution_results(MONITOR_DAG_ID, exec_date)
         return jsonify(results)
     except Exception as e:
         return jsonify({'error': f'处理请求时发生错误: {str(e)}'}), 500

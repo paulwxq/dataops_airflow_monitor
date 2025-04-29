@@ -189,7 +189,7 @@ def format_dag_run_result(dag_run_data, task_data):
     
     # 格式化单个DAG Run结果
     run_result = {
-        'dag_run_id': dag_run_data['dag_run_id'],
+        'run_id': dag_run_data['dag_run_id'],
         'logical_date_local': convert_utc_to_cn_time(dag_run_data['logical_date']),
         'state': dag_run_data['dag_run_state'],
         'PythonOperator': {

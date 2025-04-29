@@ -23,7 +23,7 @@ LOG_FORMAT = '[%(asctime)s] [%(levelname)s] [%(name)s:%(lineno)d] - %(message)s'
 LOG_DATE_FORMAT = '%Y-%m-%d %H:%M:%S'
 
 # 默认 DAG 配置
-DEFAULT_DAG_ID = 'dataops_productline_execute_dag'
+MONITOR_DAG_ID = ['dataops_productline_execute_dag']
 
 # 状态映射配置
 TASK_STATES = {
