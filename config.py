@@ -5,9 +5,22 @@ DB_CONFIG = {
     'host': os.environ.get('AIRFLOW_DB_HOST', '192.168.67.10'),
     'port': os.environ.get('AIRFLOW_DB_PORT', 5432),
     'database': os.environ.get('AIRFLOW_DB_NAME', 'airflow'),
-    'user': os.environ.get('AIRFLOW_DB_USER', 'admin'),
-    'password': os.environ.get('AIRFLOW_DB_PASSWORD', 'admin')
+    'user': os.environ.get('AIRFLOW_DB_USER', 'postgres'),
+    'password': os.environ.get('AIRFLOW_DB_PASSWORD', 'postgres')
 }
+
+# Neo4j数据库配置
+NEO4J_CONFIG = {
+    'uri': os.environ.get('NEO4J_URI', 'bolt://192.168.67.1:7687'),
+    'user': os.environ.get('NEO4J_USER', 'neo4j'),
+    'password': os.environ.get('NEO4J_PASSWORD', 'Passw0rd')
+}
+
+# 日志配置
+LOG_LEVEL = os.environ.get('LOG_LEVEL', 'DEBUG')  # 可选：DEBUG, INFO, WARNING, ERROR, CRITICAL
+LOG_FILE = os.environ.get('LOG_FILE', None)      # 日志文件路径，None表示仅控制台输出
+LOG_FORMAT = '[%(asctime)s] [%(levelname)s] [%(name)s:%(lineno)d] - %(message)s'
+LOG_DATE_FORMAT = '%Y-%m-%d %H:%M:%S'
 
 # 默认 DAG 配置
 DEFAULT_DAG_ID = 'dataops_productline_execute_dag'

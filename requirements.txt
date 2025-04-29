@@ -3,3 +3,4 @@ requests>=2.25.0
 apache-airflow-client>=2.10.0
 pytz>=2022.1
 psycopg2-binary>=2.9.9
+neo4j>=5.0.0

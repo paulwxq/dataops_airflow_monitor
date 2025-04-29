@@ -1,6 +1,96 @@
 import datetime
 import pytz
-from config import TIMEZONE, UTC_OFFSET, TASK_STATES
+import logging
+import os
+from config import TIMEZONE, UTC_OFFSET, TASK_STATES, LOG_LEVEL, LOG_FILE, LOG_FORMAT, LOG_DATE_FORMAT
+
+# 转换字符串日志级别为logging对象
+def get_log_level(level_str):
+    """
+    将字符串日志级别转换为logging模块的日志级别常量
+    
+    Args:
+        level_str: 日志级别字符串，如 'INFO', 'DEBUG' 等
+        
+    Returns:
+        log_level: logging模块的日志级别常量
+    """
+    levels = {
+        'DEBUG': logging.DEBUG,
+        'INFO': logging.INFO,
+        'WARNING': logging.WARNING,
+        'ERROR': logging.ERROR,
+        'CRITICAL': logging.CRITICAL
+    }
+    return levels.get(level_str.upper(), logging.INFO)
+
+# 日志配置
+def setup_logger(name=None, log_level=None, log_file=None):
+    """
+    创建并配置日志器
+    
+    Args:
+        name: 日志器名称，默认为None表示使用root logger
+        log_level: 日志级别，默认为None表示使用配置中的级别
+        log_file: 日志文件路径，默认为None表示使用配置中的文件路径
+        
+    Returns:
+        logger: 配置好的日志器对象
+    """
+    # 使用配置中的值
+    if log_level is None:
+        log_level = get_log_level(LOG_LEVEL)
+    if log_file is None:
+        log_file = LOG_FILE
+    
+    # 创建日志器
+    if name:
+        logger = logging.getLogger(name)
+    else:
+        logger = logging.getLogger()
+    
+    # 避免重复配置
+    if logger.handlers:
+        return logger
+    
+    # 设置日志级别
+    logger.setLevel(log_level)
+    
+    # 创建控制台处理器
+    console_handler = logging.StreamHandler()
+    console_handler.setLevel(log_level)
+    
+    # 创建格式化器
+    formatter = logging.Formatter(
+        LOG_FORMAT,
+        LOG_DATE_FORMAT
+    )
+    
+    # 设置控制台处理器的格式
+    console_handler.setFormatter(formatter)
+    
+    # 添加控制台处理器到日志器
+    logger.addHandler(console_handler)
+    
+    # 如果指定了日志文件，创建文件处理器
+    if log_file:
+        # 确保日志目录存在
+        log_dir = os.path.dirname(log_file)
+        if log_dir and not os.path.exists(log_dir):
+            os.makedirs(log_dir)
+        
+        # 创建文件处理器
+        file_handler = logging.FileHandler(log_file, encoding='utf-8')
+        file_handler.setLevel(log_level)
+        file_handler.setFormatter(formatter)
+        
+        # 添加文件处理器到日志器
+        logger.addHandler(file_handler)
+    
+    return logger
+
+# 创建默认日志器
+logger = setup_logger('dataops_airflow_monitor')
 
 def convert_cn_date_to_utc_range(execution_date):
     """
@@ -97,8 +187,8 @@ def format_dag_run_result(dag_run_data, task_data):
         if state_category in task_summary:
             task_summary[state_category] += 1
     
-    # 格式化结果
-    result = {
+    # 格式化单个DAG Run结果
+    run_result = {
         'dag_run_id': dag_run_data['dag_run_id'],
         'logical_date_local': convert_utc_to_cn_time(dag_run_data['logical_date']),
         'state': dag_run_data['dag_run_state'],
@@ -107,7 +197,7 @@ def format_dag_run_result(dag_run_data, task_data):
         }
     }
     
-    return result
+    return run_result
 
 # utils.py 添加的函数
 def parse_state_parameter(state_param):
