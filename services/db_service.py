@@ -165,3 +165,66 @@ class DBService:
             return []
         finally:
             self.disconnect()
+
+    def get_tasks_by_run_id(self, dag_id, run_id, states=None):
+        """
+        根据DAG ID和Run ID查询任务列表
+        
+        Args:
+            dag_id: DAG ID
+            run_id: DAG Run ID
+            states: 状态列表，如果为None则查询所有状态
+            
+        Returns:
+            tasks: 符合条件的任务列表，包含task_id、operator和raw_state
+        """
+        if not self.connect():
+            return []
+        
+        try:
+            # 构建基础SQL
+            sql = """
+            SELECT DISTINCT
+                task_id,
+                operator,
+                state as raw_state
+            FROM
+                task_instance
+            WHERE
+                dag_id = %s
+                AND run_id = %s
+                AND operator = 'PythonOperator'
+            """
+            
+            params = [dag_id, run_id]
+            
+            # 如果指定了状态，添加状态过滤条件
+            if states and len(states) > 0:
+                placeholders = ','.join(['%s'] * len(states))
+                sql += f" AND state IN ({placeholders})"
+                params.extend(states)
+            
+            sql += " ORDER BY task_id ASC"
+            
+            logger.debug(sql)
+            logger.debug(f"查询参数: {params}")
+            self.cursor.execute(sql, params)
+            results = self.cursor.fetchall()
+            
+            # 转换为字典列表
+            tasks = []
+            for row in results:
+                tasks.append({
+                    'task_id': row[0],
+                    'operator': row[1],
+                    'raw_state': row[2]
+                })
+                
+            logger.info(f"查询到 {len(tasks)} 个任务")
+            return tasks
+            
+        except Exception as e:
+            logger.error(f"查询失败: {e}")
+            return []
+        finally:
+            self.disconnect()

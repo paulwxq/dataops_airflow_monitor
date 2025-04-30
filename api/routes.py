@@ -34,30 +34,37 @@ def get_dag_execution_results():
     except Exception as e:
         return jsonify({'error': f'处理请求时发生错误: {str(e)}'}), 500
 
-@api_bp.route('/dags/<dag_id>/execution-results/tasks', methods=['GET'])
-def get_tasks_by_state(dag_id):
+@api_bp.route('/dags/exec-results/tasks', methods=['POST'])
+def get_tasks_by_state():
     """
     获取指定状态的任务列表
     
-    URL参数:
-        dag_id: DAG ID
-        execution_date: 执行日期（中国时区，格式YYYY-MM-DD）
-        state: 状态参数（如'success,failed'或'all'）
+    请求体参数:
+        dag_id: DAG ID (必需)
+        run_id: DAG Run ID (必需)
+        state: 状态参数（如'success,failed'或'all'），可选，默认为'all'
     """
-    # 获取查询参数
-    execution_date = request.args.get('execution_date')
-    state = request.args.get('state')
+    # 获取请求体数据
+    data = request.json
     
     # 参数验证
-    if not execution_date:
-        return jsonify({'error': '缺少必需的参数execution_date'}), 400
+    if not data:
+        return jsonify({'error': '缺少请求体数据'}), 400
     
-    if not state:
-        return jsonify({'error': '缺少必需的参数state'}), 400
+    if 'dag_id' not in data:
+        return jsonify({'error': '缺少必需的参数dag_id'}), 400
+    
+    if 'run_id' not in data:
+        return jsonify({'error': '缺少必需的参数run_id'}), 400
+    
+    # 获取参数
+    dag_id = data['dag_id']
+    run_id = data['run_id']
+    state = data.get('state', 'all')  # 默认为'all'
     
     try:
         # 调用控制器方法
-        results = task_controller.get_tasks_by_state(dag_id, execution_date, state)
+        results = task_controller.get_tasks_by_state(dag_id, run_id, state)
         return jsonify(results)
     except Exception as e:
         return jsonify({'error': f'处理请求时发生错误: {str(e)}'}), 500

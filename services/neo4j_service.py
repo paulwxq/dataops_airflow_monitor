@@ -54,4 +54,78 @@ class Neo4jService:
             logger.error(f"查询Neo4j未调度节点数量失败: {e}")
             return 0
         finally:
+            self.disconnect()
+
+    def get_cn_name_by_en_name(self, en_name):
+        """
+        根据英文名查询节点的中文名
+        
+        Args:
+            en_name: 节点的英文名称
+            
+        Returns:
+            cn_name: 节点的中文名称，如果未找到则返回None
+        """
+        if not self.connect():
+            return None
+        
+        try:
+            with self.driver.session() as session:
+                logger.debug(f"执行Neo4j查询获取节点中文名，英文名: {en_name}")
+                result = session.run("""
+                    MATCH (n)
+                    WHERE n.en_name = $en_name
+                    RETURN n.name AS cn_name
+                """, en_name=en_name)
+                
+                # 获取结果
+                record = result.single()
+                if record:
+                    cn_name = record["cn_name"]
+                    logger.info(f"找到节点中文名: {cn_name}")
+                    return cn_name
+                logger.info(f"未找到英文名为 {en_name} 的节点")
+                return None
+        except Exception as e:
+            logger.error(f"查询Neo4j节点中文名失败: {e}")
+            return None
+        finally:
+            self.disconnect()
+
+    def check_node_by_en_name(self, en_name):
+        """
+        根据英文名查询节点是否存在及其中文名
+        
+        Args:
+            en_name: 节点的英文名称
+            
+        Returns:
+            exists: 节点是否存在
+            cn_name: 节点的中文名称，如果未找到或为空则返回None
+        """
+        if not self.connect():
+            return False, None
+        
+        try:
+            with self.driver.session() as session:
+                logger.debug(f"执行Neo4j查询检查节点，英文名: {en_name}")
+                result = session.run("""
+                    MATCH (n)
+                    WHERE n.en_name = $en_name
+                    RETURN n.name AS cn_name
+                """, en_name=en_name)
+                
+                # 获取结果
+                record = result.single()
+                if record:
+                    logger.info(f"找到英文名为 {en_name} 的节点")
+                    cn_name = record["cn_name"]  # 可能为None
+                    return True, cn_name
+                
+                logger.info(f"未找到英文名为 {en_name} 的节点")
+                return False, None
+        except Exception as e:
+            logger.error(f"查询Neo4j节点信息失败: {e}")
+            return False, None
+        finally:
             self.disconnect() 
