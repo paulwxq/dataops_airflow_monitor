@@ -176,7 +176,7 @@ class DBService:
             states: 状态列表，如果为None则查询所有状态
             
         Returns:
-            tasks: 符合条件的任务列表，包含task_id、operator和raw_state
+            tasks: 符合条件的任务列表，包含task_id、operator、raw_state和try_number
         """
         if not self.connect():
             return []
@@ -187,7 +187,8 @@ class DBService:
             SELECT DISTINCT
                 task_id,
                 operator,
-                state as raw_state
+                state as raw_state,
+                try_number
             FROM
                 task_instance
             WHERE
@@ -217,7 +218,8 @@ class DBService:
                 tasks.append({
                     'task_id': row[0],
                     'operator': row[1],
-                    'raw_state': row[2]
+                    'raw_state': row[2],
+                    'try_number': row[3]
                 })
                 
             logger.info(f"查询到 {len(tasks)} 个任务")
