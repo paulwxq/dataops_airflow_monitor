@@ -1,5 +1,6 @@
 # api/controllers/log_controller.py
 from services.log_service import LogService
+from utils import logger
 
 class LogController:
     def __init__(self):
@@ -19,6 +20,7 @@ class LogController:
             result: 包含日志内容和元数据的字典
             error: 错误信息（如果有）
         """
+        # 获取日志内容
         log_content, error = self.log_service.get_task_log(dag_id, task_id, dag_run_id, try_number)
         
         if error:
@@ -30,7 +32,8 @@ class LogController:
             "dag_run_id": dag_run_id,
             "task_id": task_id,
             "try_number": try_number,
-            "log": log_content
+            "log": log_content or ""  # 确保返回空字符串而不是None
         }
         
+        logger.info(f"成功获取日志: dag_id={dag_id}, task_id={task_id}, 日志长度={len(log_content) if log_content else 0}")
         return result, None

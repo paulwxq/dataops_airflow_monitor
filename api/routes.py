@@ -69,6 +69,50 @@ def get_tasks_by_state():
     except Exception as e:
         return jsonify({'error': f'处理请求时发生错误: {str(e)}'}), 500
 
+@api_bp.route('/dags/exec-results/task-logs', methods=['POST'])
+def get_task_logs():
+    """
+    获取指定任务的日志内容
+    
+    请求体参数:
+        dag_id: DAG ID (必需)
+        run_id: DAG Run ID (必需)
+        task_id: 任务 ID (必需)
+        try_number: 尝试次数，可选，默认为1
+    """
+    # 获取请求体数据
+    data = request.json
+    
+    # 参数验证
+    if not data:
+        return jsonify({'error': '缺少请求体数据'}), 400
+    
+    if 'dag_id' not in data:
+        return jsonify({'error': '缺少必需的参数dag_id'}), 400
+    
+    if 'run_id' not in data:
+        return jsonify({'error': '缺少必需的参数run_id'}), 400
+    
+    if 'task_id' not in data:
+        return jsonify({'error': '缺少必需的参数task_id'}), 400
+    
+    # 获取参数
+    dag_id = data['dag_id']
+    run_id = data['run_id']
+    task_id = data['task_id']
+    try_number = data.get('try_number', 1)  # 默认为1
+    
+    try:
+        # 调用控制器方法
+        result, error = log_controller.get_task_log(dag_id, run_id, task_id, try_number)
+        
+        if error:
+            return jsonify({'error': error}), 404
+        
+        return jsonify(result)
+    except Exception as e:
+        return jsonify({'error': f'处理请求时发生错误: {str(e)}'}), 500
+
 @api_bp.route('/dags/<dag_id>/dagRuns/<dag_run_id>/taskInstances/<task_id>/log', methods=['GET'])
 def get_task_log(dag_id, dag_run_id, task_id):
     """

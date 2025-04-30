@@ -9,6 +9,13 @@ DB_CONFIG = {
     'password': os.environ.get('AIRFLOW_DB_PASSWORD', 'postgres')
 }
 
+# Airflow API配置
+AIRFLOW_API_CONFIG = {
+    'base_url': os.environ.get('AIRFLOW_API_BASE_URL', 'http://192.168.67.10:8080/api/v1'),
+    'username': os.environ.get('AIRFLOW_API_USERNAME', 'admin'),
+    'password': os.environ.get('AIRFLOW_API_PASSWORD', 'admin')
+}
+
 # Neo4j数据库配置
 NEO4J_CONFIG = {
     'uri': os.environ.get('NEO4J_URI', 'bolt://192.168.67.1:7687'),

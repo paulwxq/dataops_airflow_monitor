@@ -56,6 +56,51 @@ class Neo4jService:
         finally:
             self.disconnect()
 
+    def get_unscheduled_list(self):
+        """
+        查询未调度关系的详细列表
+        
+        Returns:
+            unscheduled_list: 包含未调度关系的详细信息的列表
+        """
+        if not self.connect():
+            return []
+        
+        try:
+            with self.driver.session() as session:
+                logger.debug("执行Neo4j查询获取未调度关系详细列表")
+                result = session.run("""
+                    MATCH (target)-[rel:DERIVED_FROM|ORIGINATES_FROM]->(source)
+                    WHERE rel.schedule_status IS NOT NULL AND rel.schedule_status = false
+                    RETURN target.name as target_name, target.en_name as target_en_name,
+                           source.name as source_name, source.en_name as source_en_name,
+                           type(rel) as relation_type
+                """)
+                
+                # 获取结果
+                unscheduled_list = []
+                for record in result:
+                    item = {
+                        "target": {
+                            "cn_name": record["target_name"],
+                            "en_name": record["target_en_name"]
+                        },
+                        "source": {
+                            "cn_name": record["source_name"],
+                            "en_name": record["source_en_name"]
+                        },
+                        "relation_type": record["relation_type"]
+                    }
+                    unscheduled_list.append(item)
+                
+                logger.info(f"查询到 {len(unscheduled_list)} 条未调度关系")
+                return unscheduled_list
+        except Exception as e:
+            logger.error(f"查询Neo4j未调度关系详细列表失败: {e}")
+            return []
+        finally:
+            self.disconnect()
+
     def get_cn_name_by_en_name(self, en_name):
         """
         根据英文名查询节点的中文名
