@@ -25,7 +25,9 @@ class Neo4jService:
     
     def get_unscheduled_count(self):
         """
-        查询未调度节点的数量
+        查询未调度节点的数量，包括：
+        1. schedule_status=false的关系
+        2. DataResource Label且type:structure的节点中schedule_status=false的节点
         
         Returns:
             count: 未调度节点的数量
@@ -36,20 +38,40 @@ class Neo4jService:
         try:
             with self.driver.session() as session:
                 logger.debug("执行Neo4j查询获取未调度关系数量")
-                result = session.run("""
+                
+                # 查询未调度关系数量
+                rel_result = session.run("""
                     MATCH (target)-[rel:DERIVED_FROM|ORIGINATES_FROM]->(source)
                     WHERE rel.schedule_status IS NOT NULL AND rel.schedule_status = false
                     RETURN COUNT(DISTINCT rel) AS count
                 """)
                 
-                # 获取结果
-                record = result.single()
-                if record:
-                    count = record["count"]
-                    logger.info(f"未调度关系数量: {count}")
-                    return count
-                logger.info("未找到符合条件的未调度关系")
-                return 0
+                rel_count = 0
+                rel_record = rel_result.single()
+                if rel_record:
+                    rel_count = rel_record["count"]
+                    logger.info(f"未调度关系数量: {rel_count}")
+                
+                # 查询DataResource Label且type:structure的未调度节点数量
+                node_result = session.run("""
+                    MATCH (n:DataResource)
+                    WHERE n.type = 'structure' 
+                      AND n.schedule_status IS NOT NULL 
+                      AND n.schedule_status = false
+                    RETURN COUNT(DISTINCT n) AS count
+                """)
+                
+                node_count = 0
+                node_record = node_result.single()
+                if node_record:
+                    node_count = node_record["count"]
+                    logger.info(f"未调度DataResource结构节点数量: {node_count}")
+                
+                # 合并结果
+                total_count = rel_count + node_count
+                logger.info(f"未调度总数量: {total_count}")
+                return total_count
+                
         except Exception as e:
             logger.error(f"查询Neo4j未调度节点数量失败: {e}")
             return 0
@@ -58,7 +80,9 @@ class Neo4jService:
 
     def get_unscheduled_list(self):
         """
-        查询未调度关系的详细列表
+        查询未调度关系的详细列表，包括：
+        1. schedule_status=false的关系
+        2. DataResource Label且type:structure的节点中schedule_status=false的节点
         
         Returns:
             unscheduled_list: 包含未调度关系的详细信息的列表
@@ -69,17 +93,33 @@ class Neo4jService:
         try:
             with self.driver.session() as session:
                 logger.debug("执行Neo4j查询获取未调度关系详细列表")
-                result = session.run("""
+                
+                # 查询未调度关系列表
+                rel_result = session.run("""
                     MATCH (target)-[rel:DERIVED_FROM|ORIGINATES_FROM]->(source)
                     WHERE rel.schedule_status IS NOT NULL AND rel.schedule_status = false
                     RETURN target.name as target_name, target.en_name as target_en_name,
                            source.name as source_name, source.en_name as source_en_name,
-                           type(rel) as relation_type
+                           type(rel) as relation_type, null as script_name
                 """)
                 
-                # 获取结果
+                # 查询DataResource Label且type:structure的未调度节点列表
+                node_result = session.run("""
+                    MATCH (n:DataResource)
+                    WHERE n.type = 'structure' 
+                      AND n.schedule_status IS NOT NULL 
+                      AND n.schedule_status = false
+                    RETURN n.name as target_name, n.en_name as target_en_name,
+                           null as source_name, null as source_en_name,
+                           'STRUCTURE_NODE' as relation_type,
+                           COALESCE(n.script_name, 'load_file.py') as script_name
+                """)
+                
+                # 合并结果
                 unscheduled_list = []
-                for record in result:
+                
+                # 处理关系结果
+                for record in rel_result:
                     item = {
                         "target": {
                             "cn_name": record["target_name"],
@@ -89,12 +129,30 @@ class Neo4jService:
                             "cn_name": record["source_name"],
                             "en_name": record["source_en_name"]
                         },
-                        "relation_type": record["relation_type"]
+                        "relation_type": record["relation_type"],
+                        "script_name": None
                     }
                     unscheduled_list.append(item)
                 
-                logger.info(f"查询到 {len(unscheduled_list)} 条未调度关系")
+                # 处理节点结果
+                for record in node_result:
+                    item = {
+                        "target": {
+                            "cn_name": record["target_name"],
+                            "en_name": record["target_en_name"]
+                        },
+                        "source": {
+                            "cn_name": None,
+                            "en_name": None
+                        },
+                        "relation_type": "STRUCTURE_NODE",
+                        "script_name": record["script_name"]
+                    }
+                    unscheduled_list.append(item)
+                
+                logger.info(f"查询到 {len(unscheduled_list)} 条未调度记录")
                 return unscheduled_list
+                
         except Exception as e:
             logger.error(f"查询Neo4j未调度关系详细列表失败: {e}")
             return []
