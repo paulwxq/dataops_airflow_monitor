@@ -78,86 +78,73 @@ class Neo4jService:
         finally:
             self.disconnect()
 
+    # 修改 services/neo4j_service.py 中的方法
     def get_unscheduled_list(self):
         """
-        查询未调度关系的详细列表，包括：
-        1. schedule_status=false的关系
-        2. DataResource Label且type:structure的节点中schedule_status=false的节点
+        获取所有未调度脚本及其目标表信息
         
         Returns:
-            unscheduled_list: 包含未调度关系的详细信息的列表
+            scripts_list: 包含未调度脚本及目标表信息的列表
         """
         if not self.connect():
             return []
         
         try:
             with self.driver.session() as session:
-                logger.debug("执行Neo4j查询获取未调度关系详细列表")
+                logger.debug("执行Neo4j查询获取未调度脚本列表")
                 
                 # 查询未调度关系列表
                 rel_result = session.run("""
                     MATCH (target)-[rel:DERIVED_FROM|ORIGINATES_FROM]->(source)
                     WHERE rel.schedule_status IS NOT NULL AND rel.schedule_status = false
                     RETURN target.name as target_name, target.en_name as target_en_name,
-                           source.name as source_name, source.en_name as source_en_name,
-                           type(rel) as relation_type, null as script_name
+                        COALESCE(rel.script_name, 'default_script.py') as script_name
                 """)
                 
                 # 查询DataResource Label且type:structure的未调度节点列表
                 node_result = session.run("""
                     MATCH (n:DataResource)
                     WHERE n.type = 'structure' 
-                      AND n.schedule_status IS NOT NULL 
-                      AND n.schedule_status = false
+                    AND n.schedule_status IS NOT NULL 
+                    AND n.schedule_status = false
                     RETURN n.name as target_name, n.en_name as target_en_name,
-                           null as source_name, null as source_en_name,
-                           'STRUCTURE_NODE' as relation_type,
-                           COALESCE(n.script_name, 'load_file.py') as script_name
+                        COALESCE(n.script_name, 'load_file.py') as script_name
                 """)
                 
                 # 合并结果
-                unscheduled_list = []
+                scripts_list = []
                 
                 # 处理关系结果
                 for record in rel_result:
                     item = {
-                        "target": {
-                            "cn_name": record["target_name"],
+                        "target_table": {
+                            "name": record["target_name"],
                             "en_name": record["target_en_name"]
                         },
-                        "source": {
-                            "cn_name": record["source_name"],
-                            "en_name": record["source_en_name"]
-                        },
-                        "relation_type": record["relation_type"],
-                        "script_name": None
+                        "script_name": record["script_name"]
                     }
-                    unscheduled_list.append(item)
+                    scripts_list.append(item)
                 
                 # 处理节点结果
                 for record in node_result:
                     item = {
-                        "target": {
-                            "cn_name": record["target_name"],
+                        "target_table": {
+                            "name": record["target_name"],
                             "en_name": record["target_en_name"]
                         },
-                        "source": {
-                            "cn_name": None,
-                            "en_name": None
-                        },
-                        "relation_type": "STRUCTURE_NODE",
                         "script_name": record["script_name"]
                     }
-                    unscheduled_list.append(item)
+                    scripts_list.append(item)
                 
-                logger.info(f"查询到 {len(unscheduled_list)} 条未调度记录")
-                return unscheduled_list
+                logger.info(f"查询到 {len(scripts_list)} 条未调度脚本记录")
+                return scripts_list
                 
         except Exception as e:
-            logger.error(f"查询Neo4j未调度关系详细列表失败: {e}")
+            logger.error(f"查询Neo4j未调度脚本列表失败: {e}")
             return []
         finally:
             self.disconnect()
+
 
     def get_cn_name_by_en_name(self, en_name):
         """

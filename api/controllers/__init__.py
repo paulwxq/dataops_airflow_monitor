@@ -2,3 +2,4 @@
 from .dag_controller import DAGController
 from .task_controller import TaskController
 from .log_controller import LogController
+from .script_controller import ScriptController 

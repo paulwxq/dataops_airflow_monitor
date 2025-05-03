@@ -2,6 +2,7 @@ from flask import Blueprint, request, jsonify
 from api.controllers.dag_controller import DAGController
 from api.controllers.task_controller import TaskController
 from api.controllers.log_controller import LogController
+from api.controllers.script_controller import ScriptController
 from config import MONITOR_DAG_ID
 
 # 创建Blueprint
@@ -11,6 +12,7 @@ api_bp = Blueprint('api', __name__, url_prefix='/api')
 dag_controller = DAGController()
 task_controller = TaskController()
 log_controller = LogController()
+script_controller = ScriptController()
 
 @api_bp.route('/dags/exec-results', methods=['GET'])
 def get_dag_execution_results():
@@ -135,5 +137,20 @@ def get_task_log(dag_id, dag_run_id, task_id):
             return jsonify({'error': error}), 404
         
         return jsonify(result)
+    except Exception as e:
+        return jsonify({'error': f'处理请求时发生错误: {str(e)}'}), 500
+
+@api_bp.route('/dags/unscheduled-scripts', methods=['GET'])
+def get_unscheduled_scripts():
+    """
+    获取所有未调度的脚本及其目标表信息
+    
+    返回:
+        包含未调度脚本及目标表信息的列表
+    """
+    try:
+        # 调用控制器方法
+        scripts_list = script_controller.get_unscheduled_scripts()
+        return jsonify(scripts_list)
     except Exception as e:
         return jsonify({'error': f'处理请求时发生错误: {str(e)}'}), 500
