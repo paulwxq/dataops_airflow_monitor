@@ -93,22 +93,24 @@ class Neo4jService:
             with self.driver.session() as session:
                 logger.debug("执行Neo4j查询获取未调度脚本列表")
                 
-                # 查询未调度关系列表
+                # 查询未调度关系列表，添加schedule_frequency属性
                 rel_result = session.run("""
                     MATCH (target)-[rel:DERIVED_FROM|ORIGINATES_FROM]->(source)
                     WHERE rel.schedule_status IS NOT NULL AND rel.schedule_status = false
                     RETURN target.name as target_name, target.en_name as target_en_name,
-                        COALESCE(rel.script_name, 'default_script.py') as script_name
+                        rel.script_name as script_name,
+                        rel.schedule_frequency as schedule_frequency
                 """)
                 
-                # 查询DataResource Label且type:structure的未调度节点列表
+                # 查询DataResource Label且type:structure的未调度节点列表，添加schedule_frequency属性
                 node_result = session.run("""
                     MATCH (n:DataResource)
                     WHERE n.type = 'structure' 
                     AND n.schedule_status IS NOT NULL 
                     AND n.schedule_status = false
                     RETURN n.name as target_name, n.en_name as target_en_name,
-                        COALESCE(n.script_name, 'load_file.py') as script_name
+                        COALESCE(n.script_name, 'load_file.py') as script_name,
+                        n.schedule_frequency as schedule_frequency
                 """)
                 
                 # 合并结果
@@ -121,7 +123,8 @@ class Neo4jService:
                             "name": record["target_name"],
                             "en_name": record["target_en_name"]
                         },
-                        "script_name": record["script_name"]
+                        "script_name": record["script_name"],
+                        "schedule_frequency": record["schedule_frequency"]
                     }
                     scripts_list.append(item)
                 
@@ -132,7 +135,8 @@ class Neo4jService:
                             "name": record["target_name"],
                             "en_name": record["target_en_name"]
                         },
-                        "script_name": record["script_name"]
+                        "script_name": record["script_name"],
+                        "schedule_frequency": record["schedule_frequency"]
                     }
                     scripts_list.append(item)
                 
