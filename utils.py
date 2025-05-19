@@ -179,7 +179,7 @@ def format_dag_run_result(dag_run_data, task_data):
         'failed': 0,
         'running': 0,
         'stopped': 0,
-        'total': len(task_data)
+        'scheduled_total': len(task_data)  # 直接使用scheduled_total，不再使用total
     }
     
     for task in task_data:

@@ -39,19 +39,41 @@ class DAGController:
             
             # 构建结果
             scheduled_runs = {}
+            scheduled_total = 0  # 初始化为0
+            
             if dag_runs and tasks:
                 for run_id, dag_run in dag_runs.items():
                     # 将dag_run_start_date转换为中国时区，作为结果字典的key
                     start_date_local = convert_utc_to_cn_time(dag_run['dag_run_start_date'])
                     
+                    # 获取该DAG Run的任务列表
+                    task_list = tasks.get(run_id, [])
+                    
+                    # 计算任务总数（用于提取scheduled_total）
+                    task_count = len(task_list)
+                    if task_count > scheduled_total:
+                        scheduled_total = task_count  # 使用最大的任务数作为scheduled_total
+                    
                     # 格式化该DAG Run的结果
-                    scheduled_runs[start_date_local] = format_dag_run_result(dag_run, tasks.get(run_id, []))
+                    formatted_result = format_dag_run_result(dag_run, task_list)
+                    
+                    # 确保PythonOperator.summary中有scheduled_total而不是total
+                    if 'PythonOperator' in formatted_result and 'summary' in formatted_result['PythonOperator']:
+                        summary = formatted_result['PythonOperator']['summary']
+                        if 'total' in summary:
+                            summary['scheduled_total'] = summary.pop('total')
+                    
+                    scheduled_runs[start_date_local] = formatted_result
+            
+            # 计算总数 (确保scheduled_total不为None)
+            total = (scheduled_total or 0) + unscheduled_count
             
             # 构建单个DAG的响应
             dag_result = {
                 "dag_id": dag_id,
                 "scheduled_runs": scheduled_runs,
-                "unscheduled_summary": unscheduled_count
+                "unscheduled_total": unscheduled_count,  # 将unscheduled_summary改为unscheduled_total
+                "total": total  # 添加新字段 total
             }
             
             # 添加到结果数组
