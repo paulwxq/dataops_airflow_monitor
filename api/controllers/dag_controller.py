@@ -14,7 +14,7 @@ class DAGController:
         Args:
             dag_ids: DAG ID 列表
             execution_date: 执行日期（中国时区，格式YYYY-MM-DD）
-            
+                
         Returns:
             results: API响应结果
         """
@@ -38,13 +38,13 @@ class DAGController:
             dag_runs, tasks = self.db_service.get_dag_runs_with_tasks(dag_id, start_date, end_date)
             
             # 构建结果
-            scheduled_runs = {}
+            runs = []
             scheduled_total = 0  # 初始化为0
             
             if dag_runs and tasks:
                 for run_id, dag_run in dag_runs.items():
-                    # 将dag_run_start_date转换为中国时区，作为结果字典的key
-                    start_date_local = convert_utc_to_cn_time(dag_run['dag_run_start_date'])
+                    # 将dag_run_start_date转换为中国时区
+                    local_exec_time = convert_utc_to_cn_time(dag_run['dag_run_start_date'])
                     
                     # 获取该DAG Run的任务列表
                     task_list = tasks.get(run_id, [])
@@ -57,23 +57,20 @@ class DAGController:
                     # 格式化该DAG Run的结果
                     formatted_result = format_dag_run_result(dag_run, task_list)
                     
-                    # 确保PythonOperator.summary中有scheduled_total而不是total
-                    if 'PythonOperator' in formatted_result and 'summary' in formatted_result['PythonOperator']:
-                        summary = formatted_result['PythonOperator']['summary']
-                        if 'total' in summary:
-                            summary['scheduled_total'] = summary.pop('total')
+                    # 添加local_exec_time字段
+                    formatted_result['local_exec_time'] = local_exec_time
                     
-                    scheduled_runs[start_date_local] = formatted_result
-            
-            # 计算总数 (确保scheduled_total不为None)
-            total = (scheduled_total or 0) + unscheduled_count
+                    # 添加total和unscheduled_total
+                    formatted_result['total'] = (scheduled_total or 0) + unscheduled_count
+                    formatted_result['unscheduled_total'] = unscheduled_count
+                    
+                    # 将结果添加到runs数组
+                    runs.append(formatted_result)
             
             # 构建单个DAG的响应
             dag_result = {
                 "dag_id": dag_id,
-                "scheduled_runs": scheduled_runs,
-                "unscheduled_total": unscheduled_count,  # 将unscheduled_summary改为unscheduled_total
-                "total": total  # 添加新字段 total
+                "runs": runs
             }
             
             # 添加到结果数组

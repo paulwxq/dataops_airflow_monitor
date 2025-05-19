@@ -179,7 +179,7 @@ def format_dag_run_result(dag_run_data, task_data):
         'failed': 0,
         'running': 0,
         'stopped': 0,
-        'scheduled_total': len(task_data)  # 直接使用scheduled_total，不再使用total
+        'scheduled_total': len(task_data)
     }
     
     for task in task_data:
@@ -192,9 +192,7 @@ def format_dag_run_result(dag_run_data, task_data):
         'run_id': dag_run_data['dag_run_id'],
         'logical_date_local': convert_utc_to_cn_time(dag_run_data['logical_date']),
         'state': dag_run_data['dag_run_state'],
-        'PythonOperator': {
-            'summary': task_summary
-        }
+        'tasks': task_summary  # 直接使用task_summary作为tasks字段的值
     }
     
     return run_result
